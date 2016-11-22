@@ -26,6 +26,14 @@ namespace SmileXamarinApp.ViewModels
 
         public DelegateCommand TakePhotoCommand { get; }
 
+        private bool isBusy;
+
+        public bool IsBusy
+        {
+            get { return this.isBusy; }
+            set { this.SetProperty(ref this.isBusy, value); }
+        }
+
         public MainPageViewModel(IPageDialogService pageDialogService)
         {
             this.PageDialogService = pageDialogService;
@@ -43,15 +51,22 @@ namespace SmileXamarinApp.ViewModels
 
             this.ImageSource = ImageSource.FromStream(() => file.GetStream());
 
-            var client = new FaceServiceClient("Your API Key");
-            var result = await client.DetectAsync(file.GetStream(), returnFaceAttributes: new[]
+            try
             {
-                FaceAttributeType.Smile,
-            });
+                this.IsBusy = true;
+                var client = new FaceServiceClient("Your API Key");
+                var result = await client.DetectAsync(file.GetStream(), returnFaceAttributes: new[]
+                {
+                    FaceAttributeType.Smile,
+                });
+                if (!result.Any()) { return; }
+                await this.PageDialogService.DisplayAlertAsync("Smile point", $"Your smile point is {result.First().FaceAttributes.Smile * 100}", "OK");
+            }
+            finally
+            {
+                this.IsBusy = false;
+            }
 
-            if (!result.Any()) { return; }
-
-            await this.PageDialogService.DisplayAlertAsync("Smile point", $"Your smile point is {result.First().FaceAttributes.Smile * 100}", "OK");
         }
 
         public void OnNavigatedFrom(NavigationParameters parameters)
